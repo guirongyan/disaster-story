@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Disaster Survival Story</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#111;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Segoe UI',sans-serif;overflow:hidden}
+#wrap{position:relative;width:680px;height:460px}
+canvas{display:block;width:680px;height:460px}
+/* HUD */
+#hud{position:absolute;top:6px;left:6px;display:flex;gap:4px;flex-wrap:wrap;pointer-events:none}
+.hb{background:rgba(0,0,0,.78);border:1px solid rgba(255,255,255,.25);border-radius:7px;padding:2px 8px;color:#fff;font-size:11px;font-weight:600}
+.hb span{color:#ffd700}
+/* Hazard bar */
+#hbar{position:absolute;top:38px;left:6px;background:rgba(180,40,0,.9);border:1px solid #f84;border-radius:8px;padding:3px 12px;color:#ffd;font-size:11px;font-weight:700;display:none}
+/* Story box */
+#sbox{position:absolute;bottom:88px;left:6px;right:6px;background:rgba(0,0,0,.88);border:2px solid #4488ff;border-radius:10px;padding:10px 14px;color:#cce;font-size:12px;line-height:1.6;display:none;max-height:80px;overflow-y:auto;pointer-events:none}
+#sname{color:#ffd700;font-weight:700;margin-right:6px}
+/* Choices */
+#choices{position:absolute;bottom:88px;left:6px;right:6px;display:none;flex-direction:column;gap:4px;pointer-events:all;z-index:50}
+.cb{background:rgba(10,20,60,.95);border:2px solid #4488ff;border-radius:8px;color:#cce;font-size:12px;padding:8px 14px;cursor:pointer;text-align:left;font-family:inherit}
+.cb:hover{background:rgba(30,60,160,.95)}
+/* Spell panel */
+#spell{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.94);border:3px solid #ff8844;border-radius:14px;padding:22px 30px;text-align:center;display:none;pointer-events:all;z-index:200;min-width:290px}
+#spell h3{color:#ff8844;font-size:14px;margin-bottom:8px}
+#spell-word{font-size:26px;font-weight:800;color:#ffff44;letter-spacing:3px;margin-bottom:10px}
+#spell-in{background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.3);border-radius:8px;padding:7px 12px;color:#fff;font-size:18px;width:260px;text-align:center;font-family:inherit;letter-spacing:2px;outline:none}
+#spell-in:focus{border-color:#ff8844}
+/* Shop */
+#shop{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(6,6,20,.97);border:2px solid #ffd700;border-radius:14px;padding:18px;color:#fff;width:320px;display:none;z-index:300;pointer-events:all;max-height:88vh;overflow-y:auto}
+#shop h2{color:#ffd700;margin-bottom:10px;font-size:14px;text-align:center}
+.si{display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border:1px solid rgba(255,255,255,.12);border-radius:7px;margin-bottom:5px;gap:8px}
+.sn{font-size:11px;color:#eee;font-weight:700}.sd{font-size:9px;color:#999;margin-top:1px}
+.sp{font-size:10px;color:#ffd700;margin-bottom:3px;text-align:right}
+.sb{background:#ffd700;color:#000;border:none;border-radius:5px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer}
+.sb:disabled{background:#444;color:#666;cursor:not-allowed}
+/* Design panel */
+#design{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(6,6,20,.97);border:2px solid #ff88cc;border-radius:14px;padding:18px;color:#fff;width:340px;display:none;z-index:300;pointer-events:all}
+#design h2{color:#ff88cc;margin-bottom:10px;font-size:14px;text-align:center}
+.dl{font-size:10px;color:#aaa;margin-bottom:3px}
+.di{margin-bottom:8px}
+.di input,.di select{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:5px 8px;color:#fff;font-size:11px;font-family:inherit}
+.icon-grid{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.io{font-size:18px;cursor:pointer;padding:3px;border-radius:5px;border:2px solid transparent}
+.io.sel{border-color:#ff88cc;background:rgba(255,136,204,.2)}
+#dprev{font-size:28px;text-align:center;padding:8px;border:1px solid rgba(255,255,255,.1);border-radius:6px;margin:8px 0}
+/* Chat */
+#chat{position:absolute;bottom:88px;right:6px;width:195px;pointer-events:all;z-index:100;display:none}
+#cmsgs{background:rgba(0,0,0,.72);border:1px solid rgba(255,255,255,.15);border-radius:8px;height:95px;overflow-y:auto;padding:5px 7px;margin-bottom:3px;font-size:9px}
+.cm{color:#ccc;line-height:1.5;margin-bottom:1px}
+.cn{font-weight:700}
+#cform{display:flex;gap:3px}
+#cin{flex:1;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.2);border-radius:5px;padding:3px 6px;color:#fff;font-size:9px;font-family:inherit}
+#csend{background:rgba(100,160,255,.3);border:1px solid rgba(100,160,255,.5);border-radius:5px;color:#aaddff;font-size:9px;padding:3px 6px;cursor:pointer}
+/* Buttons */
+#btns{position:absolute;bottom:5px;left:0;width:100%;display:flex;justify-content:center;gap:4px;flex-wrap:wrap;pointer-events:all}
+.btn{background:rgba(0,0,0,.82);border:1px solid rgba(255,255,255,.32);border-radius:7px;color:#fff;font-size:10px;padding:5px 8px;cursor:pointer;font-family:inherit;font-weight:600;touch-action:none;user-select:none}
+.btn:active,.btn.held{background:rgba(255,255,255,.22)}
+.btn.gold{border-color:#ffd700;color:#ffd700}
+.btn.pink{border-color:#ff88cc;color:#ffaadd}
+.btn.red{border-color:#f44;color:#f88}
+/* Overlays */
+#fire-vfx{position:absolute;top:0;left:0;width:100%;height:100%;border:14px solid rgba(255,60,0,.5);display:none;pointer-events:none;animation:fp .25s infinite alternate}
+@keyframes fp{from{border-color:rgba(255,60,0,.35)}to{border-color:rgba(255,130,0,.85)}}
+#go{position:absolute;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.93);display:none;align-items:center;justify-content:center;z-index:600;pointer-events:all;flex-direction:column;gap:12px}
+#go h1{color:#f44;font-size:26px;font-weight:800;text-shadow:0 0 20px #f44}
+.ebtn{background:#ffd700;color:#000;border:none;border-radius:10px;padding:10px 26px;font-size:14px;font-weight:700;cursor:pointer}
+/* Zoom */
+#zoom{position:absolute;bottom:52px;right:6px;display:flex;flex-direction:column;gap:2px;pointer-events:all}
+.zb{background:rgba(0,0,0,.82);border:1px solid #aaa;border-radius:6px;color:#ddd;font-size:12px;padding:4px 8px;cursor:pointer;font-weight:700}
+/* Save banner */
+#savebanner{position:absolute;top:6px;right:6px;background:rgba(0,100,0,.8);border:1px solid #44ff88;border-radius:7px;padding:3px 10px;color:#44ff88;font-size:10px;display:none}
+</style>
+</head>
+<body>
+<div id="wrap">
+<canvas id="c"></canvas>
+<div id="fire-vfx"></div>
+<div id="hud">
+  <div class="hb">❤️ <span id="hhp">100</span></div>
+  <div class="hb">💰 <span id="hgold">$0</span></div>
+  <div class="hb">🌊 Wave <span id="hwv">1</span></div>
+  <div class="hb" id="hacc" style="display:none">👗 <span id="hacct"></span></div>
+</div>
+<div id="hbar"></div>
+<div id="savebanner">✅ Progress Saved</div>
+<div id="sbox"><span id="sname"></span><span id="stxt"></span></div>
+<div id="choices"></div>
+<div id="spell">
+  <h3>🔥 YOU'RE ON FIRE!</h3>
+  <div id="spell-word">STOP DROP ROLL</div>
+  <input id="spell-in" maxlength="14" placeholder="type here…" autocomplete="off" autocorrect="off" spellcheck="false">
+  <div style="font-size:10px;color:#888;margin-top:5px">Type exactly: STOP DROP ROLL</div>
+</div>
+<div id="shop">
+  <h2>🏪 Safety Shop</h2>
+  <div id="shopitems"></div>
+  <button class="btn gold" style="width:100%;margin-top:8px;pointer-events:all" onclick="closeShop()">✕ Close Shop</button>
+</div>
+<div id="design">
+  <h2>✏️ Design Your Accessory</h2>
+  <div class="di"><div class="dl">Name</div><input id="dname" placeholder="My accessory…" maxlength="20" oninput="updPrev()"></div>
+  <div class="di"><div class="dl">Icon</div><div class="icon-grid" id="diconGrid"></div></div>
+  <div class="di"><div class="dl">Color</div><input id="dcolor" type="color" value="#ff88cc" style="height:28px;width:100%;cursor:pointer" oninput="updPrev()"></div>
+  <div class="di"><div class="dl">Slot</div><select id="dslot" oninput="updPrev()"><option value="hat">🎩 Hat</option><option value="face">😷 Face</option><option value="body">🦺 Body</option><option value="boots">👟 Boots</option></select></div>
+  <div id="dprev">⭐</div>
+  <div style="display:flex;gap:6px">
+    <button class="btn pink" style="flex:1;pointer-events:all" onclick="saveDesign()">✅ Add to Wardrobe</button>
+    <button class="btn" style="flex:1;pointer-events:all" onclick="closeDesign()">✕ Cancel</button>
+  </div>
+</div>
+<div id="chat">
+  <div id="cmsgs"></div>
+  <div id="cform"><input id="cin" placeholder="Chat…" maxlength="50"><button id="csend" onclick="sendChat()">→</button></div>
+</div>
+<div id="zoom">
+  <button class="zb" onclick="adjZ(.2)">🔍+</button>
+  <button class="zb" id="zlb" style="font-size:9px;cursor:default;pointer-events:none">100%</button>
+  <button class="zb" onclick="adjZ(-.2)">🔍-</button>
+</div>
+<div id="btns">
+  <button class="btn" onpointerdown="K.l=1" onpointerup="K.l=0" onpointerleave="K.l=0">◀ Walk</button>
+  <button class="btn" onpointerdown="K.r=1" onpointerup="K.r=0" onpointerleave="K.r=0">Walk ▶</button>
+  <button class="btn" onpointerdown="doJump()">⬆️ Jump</button>
+  <button class="btn red" onpointerdown="doAction()">⚡ Action</button>
+  <button class="btn gold" onclick="openShop()">🏪 Shop</button>
+  <button class="btn pink" onclick="openDesign()">✏️ Design</button>
+  <button class="btn" onclick="toggleChat()">💬 Chat</button>
+  <button class="btn" onclick="saveGame()" style="border-color:#44ff88;color:#44ff88">💾 Save</button>
+</div>
+<div id="go" style="flex-direction:column;align-items:center">
+  <h1>💀 YOU DIDN'T SURVIVE</h1>
+  <div style="color:#ccc;font-size:13px;text-align:center;line-height:1.8" id="go-s"></div>
+  <button class="ebtn" onclick="location.reload()">▶ Try Again</button>
+</div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CANVAS + ZOOM
+// ═══════════════════════════════════════════════════════════
+const cv=document.getElementById('c'),ctx=cv.getContext('2d');
+cv.width=680;cv.height=460;
+const W=680,H=460,GR=380;
+let Z=1;
+function adjZ(d){Z=Math.max(.5,Math.min(2.5,Z+d));cv.style.transform=`scale(${Z})`;cv.style.transformOrigin='top left';document.getElementById('zlb').textContent=Math.round(Z*100)+'%';}
+
+// ═══════════════════════════════════════════════════════════
+//  SAVE / LOAD
+// ═══════════════════════════════════════════════════════════
+function saveGame(){
+  const data={gold:G.gold,wave:G.wave,hp:G.hp,equipped:{...EQ},customDesigns:[...customDesigns],shopOwned:SHOP.map(s=>({id:s.id,owned:s.owned}))};
+  try{window.storage&&window.storage.set('disaster_save',JSON.stringify(data));localStorage.setItem('disaster_save',JSON.stringify(data));}catch(e){}
+  const b=document.getElementById('savebanner');b.style.display='block';setTimeout(()=>b.style.display='none',2000);
+  addChat('System','💾 Progress saved!','#44ff88');
+}
+function loadGame(){
+  let raw=null;
+  try{raw=localStorage.getItem('disaster_save');}catch(e){}
+  if(!raw)return;
+  try{
+    const d=JSON.parse(raw);
+    G.gold=d.gold||0;G.wave=d.wave||1;G.hp=d.hp||100;
+    Object.assign(EQ,d.equipped||{});
+    if(d.customDesigns)customDesigns.push(...d.customDesigns);
+    if(d.shopOwned)d.shopOwned.forEach(s=>{const sh=SHOP.find(x=>x.id===s.id);if(sh)sh.owned=s.owned;});
+    addChat('System','✅ Progress loaded! Wave '+G.wave+', $'+G.gold,'#44ff88');
+    updHUD();updAccHUD();
+  }catch(e){}
+}
+
+// ═══════════════════════════════════════════════════════════
+//  GAME STATE
+// ═══════════════════════════════════════════════════════════
+const G={hp:100,gold:0,wave:1,dead:false,frame:0};
+let phase='lobby'; // lobby | eq | tornado | flood | fire
+let step=''; // sub-step within each hazard
+
+// ═══════════════════════════════════════════════════════════
+//  PLAYER
+// ═══════════════════════════════════════════════════════════
+const P={x:80,y:GR,vx:0,vy:0,onGround:true,facing:1,wp:0};
+const K={l:0,r:0};
+
+// ═══════════════════════════════════════════════════════════
+//  ACCESSORIES + SHOP
+// ═══════════════════════════════════════════════════════════
+const EQ={hat:null,face:null,body:null,boots:null};
+let customDesigns=[];
+const SHOP=[
+  {id:'helmet',name:'⛑️ Safety Helmet',desc:'Hat. −20% damage taken.',cost:150,owned:false,slot:'hat',icon:'⛑️'},
+  {id:'life_vest',name:'🦺 Life Vest',desc:'Body. +15s drown timer.',cost:200,owned:false,slot:'body',icon:'🦺'},
+  {id:'fire_suit',name:'🔥 Fire Suit',desc:'Body. Halve fire damage.',cost:250,owned:false,slot:'body',icon:'🔥'},
+  {id:'speed_boots',name:'👟 Speed Boots',desc:'Boots. +30% move speed.',cost:120,owned:false,slot:'boots',icon:'👟'},
+  {id:'gas_mask',name:'😷 Gas Mask',desc:'Face. Smoke immunity.',cost:180,owned:false,slot:'face',icon:'😷'},
+  {id:'hard_hat',name:'🪖 Hard Hat',desc:'Hat. +20 max HP.',cost:200,owned:false,slot:'hat',icon:'🪖'},
+];
+function openShop(){document.getElementById('shop').style.display='block';renderShop();}
+function closeShop(){document.getElementById('shop').style.display='none';}
+function renderShop(){
+  const c=document.getElementById('shopitems');c.innerHTML='';
+  SHOP.concat(customDesigns.map(d=>({...d,cost:0}))).forEach(item=>{
+    const d=document.createElement('div');d.className='si';
+    const have=item.owned||EQ[item.slot]===item.id;
+    d.innerHTML=`<div><div class="sn">${item.icon||'⭐'} ${item.name}</div><div class="sd">${item.desc||''}</div></div><div><div class="sp">$${item.cost}</div><button class="sb" ${have||G.gold<item.cost?'disabled':''} onclick="buyItem('${item.id}')">${have?'✅ Got it':'Buy'}</button></div>`;
+    c.appendChild(d);
+  });
+}
+function buyItem(id){
+  const item=SHOP.concat(customDesigns).find(x=>x.id===id);
+  if(!item)return;
+  if(!item.owned&&G.gold>=item.cost){G.gold-=item.cost;item.owned=true;}
+  if(item.owned){EQ[item.slot]=EQ[item.slot]===item.id?null:item.id;}
+  updHUD();updAccHUD();renderShop();
+}
+function updAccHUD(){
+  const icons=Object.values(EQ).filter(Boolean).map(id=>{const a=SHOP.concat(customDesigns).find(x=>x.id===id);return a?a.icon||a.name[0]:'';}).join(' ');
+  document.getElementById('hacct').textContent=icons;
+  document.getElementById('hacc').style.display=icons?'block':'none';
+}
+function dmgReduce(){return EQ.hat==='helmet'||EQ.hat==='hard_hat'?.8:1;}
+function hasFireSuit(){return EQ.body==='fire_suit';}
+function hasLifeVest(){return EQ.body==='life_vest';}
+function speedMult(){return EQ.boots==='speed_boots'?1.3:1;}
+function hasHardHat(){return EQ.hat==='hard_hat';}
+
+// ═══════════════════════════════════════════════════════════
+//  DESIGN
+// ═══════════════════════════════════════════════════════════
+const ICONS=['⭐','🔥','❄️','⚡','💎','🌟','🎯','🏆','🦋','🌈','🔮','🌙','☀️','🌺','🍀','🦁','🐉','🌊','🍄','🎭','👻','🧛','💀','🛡️','⚔️','🎩','🧣','🌂','🪄','🎪'];
+let selIcon='⭐';
+function initIconGrid(){
+  const g=document.getElementById('diconGrid');g.innerHTML='';
+  ICONS.forEach(ic=>{const d=document.createElement('div');d.className='io'+(ic===selIcon?' sel':'');d.textContent=ic;d.onclick=()=>{selIcon=ic;document.querySelectorAll('.io').forEach(x=>x.classList.remove('sel'));d.classList.add('sel');updPrev();};g.appendChild(d);});
+}
+function updPrev(){
+  const n=document.getElementById('dname').value||'Custom';
+  const col=document.getElementById('dcolor').value;
+  document.getElementById('dprev').innerHTML=`<span style="font-size:28px;filter:drop-shadow(0 0 6px ${col})">${selIcon}</span><br><span style="font-size:10px;color:${col}">${n}</span>`;
+}
+function openDesign(){initIconGrid();document.getElementById('design').style.display='block';updPrev();}
+function closeDesign(){document.getElementById('design').style.display='none';}
+function saveDesign(){
+  const nm=document.getElementById('dname').value||'My Accessory';
+  const col=document.getElementById('dcolor').value;
+  const slot=document.getElementById('dslot').value;
+  const item={id:'custom_'+Date.now(),name:nm,icon:selIcon,color:col,slot,desc:'Custom design',owned:true,cost:0};
+  customDesigns.push(item);
+  EQ[slot]=item.id;
+  updAccHUD();updHUD();
+  showStory('You','✅ "'+nm+'" added to your wardrobe and equipped!');
+  setTimeout(hideStory,2500);
+  closeDesign();
+  addChat('NPC Sara','Nice design! Love the '+selIcon,'#ff88cc');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  CHAT
+// ═══════════════════════════════════════════════════════════
+const BOT=[
+  ['NPC Bob','Stay AWAY from windows in a tornado — they shatter!'],
+  ['NPC Sara','Under the table is the safest spot during earthquakes.'],
+  ['NPC Mike','Buy the fire suit before the fire hazard!'],
+  ['NPC Amy','Life vest gives you extra seconds before drowning.'],
+  ['NPC Bob','In a flood, JUMP over the waves — don\'t let them hit you!'],
+  ['NPC Sara','STOP DROP ROLL — type it fast if you catch fire!'],
+  ['NPC Mike','Speed boots help you outrun the flood waves!'],
+  ['NPC Amy','Choose the BASEMENT during a tornado — way safer!'],
+];
+let chatOpen=false;
+function toggleChat(){chatOpen=!chatOpen;document.getElementById('chat').style.display=chatOpen?'block':'none';}
+function sendChat(){const i=document.getElementById('cin');const t=i.value.trim();if(!t)return;addChat('You',t,'#ffd700');i.value='';setTimeout(()=>{const b=BOT[Math.floor(Math.random()*BOT.length)];addChat(b[0],b[1],'#88aaff');},700+Math.random()*900);}
+function addChat(name,text,col='#ccc'){const c=document.getElementById('cmsgs');const d=document.createElement('div');d.className='cm';d.innerHTML=`<span class="cn" style="color:${col}">${name}:</span> ${text}`;c.appendChild(d);c.scrollTop=c.scrollHeight;}
+document.getElementById('cin').addEventListener('keydown',e=>{if(e.key==='Enter')sendChat();});
+setInterval(()=>{if(!chatOpen)return;const b=BOT[Math.floor(Math.random()*BOT.length)];addChat(b[0],b[1],'#88aaff');},14000);
+
+// ═══════════════════════════════════════════════════════════
+//  STORY BOX
+// ═══════════════════════════════════════════════════════════
+let storyTimeout=null;
+function showStory(name,text,choices=null){
+  document.getElementById('sname').textContent=name?name+': ':'';
+  document.getElementById('stxt').textContent=text;
+  document.getElementById('sbox').style.display='block';
+  const ch=document.getElementById('choices');
+  if(choices){
+    ch.innerHTML='';ch.style.display='flex';
+    choices.forEach(o=>{const b=document.createElement('button');b.className='cb';b.textContent=o.label;b.onclick=()=>{ch.style.display='none';o.fn();};ch.appendChild(b);});
+  } else ch.style.display='none';
+}
+function hideStory(){document.getElementById('sbox').style.display='none';document.getElementById('choices').style.display='none';}
+function storyTimed(name,text,ms){showStory(name,text);clearTimeout(storyTimeout);storyTimeout=setTimeout(hideStory,ms);}
+
+// ═══════════════════════════════════════════════════════════
+//  HUD
+// ═══════════════════════════════════════════════════════════
+function updHUD(){
+  document.getElementById('hhp').textContent=Math.max(0,Math.round(G.hp));
+  document.getElementById('hgold').textContent='$'+G.gold;
+  document.getElementById('hwv').textContent=G.wave;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PARTICLES
+// ═══════════════════════════════════════════════════════════
+let particles=[];
+function spawnP(x,y,col,n=6){for(let i=0;i<n;i++)particles.push({x,y,vx:(Math.random()-.5)*5,vy:(Math.random()-.5)*5-2,life:35,col,r:2+Math.random()*4});}
+
+// ═══════════════════════════════════════════════════════════
+//  PLAYER PHYSICS
+// ═══════════════════════════════════════════════════════════
+let autoWalkDir=1,autoWalkTimer=0;
+function updPlayer(){
+  if(G.dead)return;
+  const spd=2.2*speedMult();
+  // Auto-walk when idle
+  let moving=K.l||K.r;
+  if(!moving){
+    autoWalkTimer++;
+    if(autoWalkTimer>90){
+      // gentle auto-walk bob
+      P.vx=autoWalkDir*spd*.5;
+      if(autoWalkTimer>180){autoWalkDir*=-1;autoWalkTimer=0;}
+    }
+  } else {autoWalkTimer=0;}
+  if(K.l){P.vx=-spd;P.facing=-1;}
+  else if(K.r){P.vx=spd;P.facing=1;}
+  else if(!moving&&autoWalkTimer>90){/* already set */}
+  else P.vx*=.75;
+  P.vy+=.35;P.x+=P.vx;P.y+=P.vy;
+  P.wp+=Math.abs(P.vx)>.1?.18:.03;
+  if(P.y>=GR){P.y=GR;P.vy=0;P.onGround=true;}else P.onGround=false;
+  P.x=Math.max(0,Math.min(W-20,P.x));
+}
+
+// ═══════════════════════════════════════════════════════════
+//  ACTION BUTTON
+// ═══════════════════════════════════════════════════════════
+function doJump(){if(P.onGround&&!G.dead){P.vy=-12;P.onGround=false;spawnP(P.x+10,GR,'#aaa',4);}}
+function doAction(){
+  if(step==='eq_shelter_wait'){tryEnterEQHouse();return;}
+  if(step==='eq_table_wait'){tryHideUnderTable();return;}
+  if(step==='tornado_house_wait'){tryEnterTornadoHouse();return;}
+  if(step==='fire_choice'){fireChoice_Close();return;}
+  if(onFire){document.getElementById('spell').style.display='block';setTimeout(()=>document.getElementById('spell-in').focus(),50);return;}
+  if(step==='fire_window'){climbOutWindow();return;}
+  storyTimed('Narrator','No action available right now. Follow the story!',2000);
+}
+
+// keyboard
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft')K.l=1;if(e.key==='ArrowRight')K.r=1;
+  if(e.key==='ArrowUp'||e.key==='w'||e.key===' '){e.preventDefault();doJump();}
+  if(e.key==='e'||e.key==='E')doAction();
+  if(e.key==='='||e.key==='+')adjZ(.2);if(e.key==='-')adjZ(-.2);
+});
+document.addEventListener('keyup',e=>{if(e.key==='ArrowLeft')K.l=0;if(e.key==='ArrowRight')K.r=0;});
+
+// ═══════════════════════════════════════════════════════════
+//  SPELL CHECK
+// ═══════════════════════════════════════════════════════════
+document.getElementById('spell-in').addEventListener('input',()=>{
+  const v=document.getElementById('spell-in').value.toUpperCase().replace(/\s+/g,' ').trim();
+  if(v==='STOP DROP ROLL'){
+    onFire=false;
+    document.getElementById('spell').style.display='none';
+    document.getElementById('fire-overlay').style.display='none';
+    document.getElementById('spell-in').value='';
+    storyTimed('You','🎉 STOP! DROP! ROLL! The flames go out!',3000);
+    spawnP(P.x+10,P.y,'#44aaff',14);
+    addChat('NPC Mike','Nice work!! You\'re safe now.','#44ff88');
+    step='fire_crew_waiting';
+  }
+});
+
+// ═══════════════════════════════════════════════════════════
+//  HAZARD SEQUENCE
+// ═══════════════════════════════════════════════════════════
+const HAZARD_ORDER=['earthquake','tornado','flood','fire'];
+let hazardIdx=0;
+let hazardCountdown=0;
+function nextHazard(){
+  const h=HAZARD_ORDER[hazardIdx%HAZARD_ORDER.length];
+  hazardIdx++;G.wave++;updHUD();
+  const names={earthquake:'🌍 EARTHQUAKE',tornado:'🌪️ TORNADO',flood:'🌊 FLOOD',fire:'🔥 WILDFIRE'};
+  document.getElementById('hbar').style.display='block';
+  document.getElementById('hbar').textContent=names[h];
+  if(h==='earthquake')startEQ();
+  else if(h==='tornado')startTornado();
+  else if(h==='flood')startFlood();
+  else if(h==='fire')startFire();
+}
+function endHazard(rewardExtra=0){
+  document.getElementById('hbar').style.display='none';
+  const reward=200+G.wave*50+rewardExtra;
+  G.gold+=reward;updHUD();
+  spawnP(P.x+10,P.y,'#ffd700',12);
+  showStory('Narrator','🎉 You survived! +$'+reward+' reward. Teleporting back to the lobby…');
+  addChat('NPC Amy','Great job! Rest up before the next one.','#44ff88');
+  setTimeout(()=>{P.x=80;P.y=GR;P.vx=0;P.vy=0;hideStory();phase='lobby';step='';
+    hazardData={};eqHouses=[];eqShake=0;
+    clearInterval(floodInterval);floodWaves=[];floodY=H+20;
+    document.getElementById('fire-overlay').style.display='none';
+    onFire=false;document.getElementById('spell').style.display='none';
+    crewPhase='none';crewTimer=0;
+    smokeP=[];fireP=[];
+    saveGame();
+    setTimeout(nextHazard,4500);
+  },3000);
+}
+function die(){
+  G.dead=true;
+  document.getElementById('go').style.display='flex';
+  document.getElementById('go-s').innerHTML=`Wave ${G.wave} | Gold: $${G.gold}<br>HP: ${Math.max(0,Math.round(G.hp))}`;
+}
+function hurtPlayer(dmg,invFrames=0){
+  const reduced=dmg*dmgReduce();
+  G.hp-=reduced;updHUD();spawnP(P.x+10,P.y+10,'#f44',5);
+  if(G.hp<=0&&!G.dead)die();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EARTHQUAKE
+// ═══════════════════════════════════════════════════════════
+let eqHouses=[],eqShake=0,eqTimer=0,eqTableX=340,tableUnder=false,eqDone=false;
+let hazardData={};
+function startEQ(){
+  phase='earthquake';step='eq_shelter_wait';eqShake=0;eqTimer=0;tableUnder=false;eqDone=false;
+  eqHouses=[{x:80,y:GR-100,w:110,h:100},{x:490,y:GR-100,w:110,h:100}];
+  eqTableX=340;
+  showStory('Narrator','🌍 EARTHQUAKE! The ground is shaking violently! Two houses appeared — run inside one quickly and find a table to hide under! (Press ⚡ Action near a door)',[]);
+  addChat('NPC Bob','GET INSIDE! Find the table!','#ff8844');
+  setTimeout(()=>{if(step==='eq_shelter_wait')addChat('NPC Sara','Hurry! The shaking is getting worse!','#ffaa44');},4000);
+}
+function tryEnterEQHouse(){
+  const near=eqHouses.some(h=>P.x>h.x-20&&P.x<h.x+h.w+20&&P.y>h.y-10);
+  if(!near){storyTimed('Narrator','Get closer to a house door first!',2000);return;}
+  step='eq_inside';
+  storyTimed('Narrator','You\'re inside! Find the table in the middle — get under it! (Press ⚡ Action when near the table)',4000);
+  addChat('NPC Mike','Table is in the center! Go go go!','#ff8844');
+  eqHouses=[];// hide house fronts, player is "inside"
+  P.x=200;P.y=GR;// reposition to interior view
+}
+function tryHideUnderTable(){
+  if(Math.abs(P.x-eqTableX)<55){
+    step='eq_under_table';tableUnder=true;
+    showStory('Narrator','✅ You\'re under the table! Hold on tight — the earthquake will pass!');
+    addChat('NPC Amy','Stay there! It\'ll be over soon.','#44ff88');
+    setTimeout(()=>{tableUnder=false;eqDone=true;step='eq_done';endHazard(100);},5500);
+  } else storyTimed('Narrator','Walk closer to the table first!',2000);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  TORNADO
+// ═══════════════════════════════════════════════════════════
+let tornadoX=550,tornadoVX=-1.5,tornadoRot=0,tornadoDust=[];
+let tornadoHouse={x:200,y:GR-120,w:120,h:120};
+let tornadoBasement=false,basementMoney=[],windowX=180,tornadoSuck=false;
+function startTornado(){
+  phase='tornado';step='tornado_house_wait';
+  tornadoX=560;tornadoVX=-1.5;tornadoRot=0;tornadoBasement=false;tornadoSuck=false;
+  tornadoDust=[];for(let i=0;i<70;i++)tornadoDust.push({ang:Math.random()*Math.PI*2,dist:18+Math.random()*85,spd:.03+Math.random()*.05,sz:2+Math.random()*7,col:['#a89070','#c0aa90','#888068'][Math.floor(Math.random()*3)]});
+  showStory('Narrator','🌪️ A massive tornado is forming! A shelter house appeared to your left. GET INSIDE before the tornado reaches you! (Press ⚡ Action near the door)');
+  addChat('NPC Bob','RUN TO THE HOUSE! It\'s approaching fast!','#ff4444');
+}
+function tryEnterTornadoHouse(){
+  const th=tornadoHouse;const near=P.x>th.x-20&&P.x<th.x+th.w+20;
+  if(!near){storyTimed('Narrator','Get closer to the house door!',2000);return;}
+  step='tornado_choice';
+  showStory('Narrator','You\'re inside the shelter! Where do you go?',[
+    {label:'🚪 Go to the BASEMENT (recommended!)',fn:chooseBasement},
+    {label:'🪑 Stay on main floor by the TABLE',fn:chooseTable_tornado},
+  ]);
+  addChat('NPC Sara','I always choose the basement! Never the main floor!','#88aaff');
+}
+function chooseTable_tornado(){
+  step='tornado_table';
+  showStory('Narrator','You stay near the table on the main floor. The wind HOWLS… a window SHATTERS and you feel the suction pulling you toward the tornado!');
+  addChat('NPC Bob','Oh no! Main floor is way too dangerous!!','#ff4444');
+  tornadoSuck=true;
+  setTimeout(()=>{
+    hurtPlayer(50);
+    showStory('Narrator','⚡ LIGHTNING STRIKES THROUGH THE WINDOW! You take heavy damage! The basement would have been much safer…');
+    addChat('NPC Mike','Are you okay?! That looked bad.','#ff8844');
+    setTimeout(()=>{tornadoSuck=false;if(G.hp>0)endHazard(-50);else die();},3000);
+  },2500);
+}
+function chooseBasement(){
+  step='tornado_basement';tornadoBasement=true;
+  basementMoney=[];windowX=150+Math.floor(Math.random()*300);
+  for(let i=0;i<5;i++)basementMoney.push({x:60+i*110+Math.random()*40,y:GR-20,collected:false,val:20+Math.floor(Math.random()*35)});
+  showStory('Narrator','Smart! You head to the basement. It\'s dark but safe. Look around for money — but STAY AWAY from the window! If you get too close, it will shatter and hurt you!');
+  addChat('NPC Amy','Search the basement but don\'t go near that window!','#88aaff');
+  setTimeout(()=>{if(step==='tornado_basement')endHazardBasement();},10000);
+}
+function endHazardBasement(){
+  const found=basementMoney.filter(m=>m.collected).reduce((a,m)=>a+m.val,0);
+  tornadoBasement=false;step='tornado_done';
+  storyTimed('Narrator','🌪️ The tornado passes! You found $'+found+' in the basement!',3000);
+  setTimeout(()=>endHazard(found),1000);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FLOOD
+// ═══════════════════════════════════════════════════════════
+let floodY=H+20,floodWaves=[],floodInterval=null,drownT=30,floodDone=false;
+const FLOOD_END_X=640;
+function startFlood(){
+  phase='flood';step='flood_run';floodY=H+20;floodWaves=[];floodDone=false;
+  drownT=hasLifeVest()?45:30;
+  P.x=30;P.y=GR;
+  showStory('Narrator','🌊 FLOOD! Water is rising fast and waves are surging in! Race to the RIGHT side (the exit) without getting hit by waves! You have '+drownT+' seconds before you drown!');
+  addChat('NPC Mike','RUN RIGHT! JUMP over the waves! Don\'t let them touch you!','#4488ff');
+  clearInterval(floodInterval);
+  floodInterval=setInterval(()=>{
+    if(step!=='flood_run')return;
+    floodWaves.push({x:Math.random()<.5?-40:W+40,vx:Math.random()<.5?2.8:-2.8,amp:12+Math.random()*14,r:30+Math.random()*16,life:200});
+  },1800);
+}
+function endFloodSurvived(){
+  floodDone=true;step='flood_done';clearInterval(floodInterval);
+  storyTimed('Narrator','🎉 You made it across! The flood recedes.',3000);
+  setTimeout(()=>endHazard(150),1000);
+}
+function endFloodDrowned(){
+  if(floodDone||step!=='flood_run')return;
+  step='flood_fail';clearInterval(floodInterval);
+  showStory('Narrator','💀 You drowned before reaching the exit! The current is too strong…');
+  G.hp-=50;updHUD();setTimeout(()=>{if(G.hp<=0)die();else endHazard(-80);},2500);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FIRE
+// ═══════════════════════════════════════════════════════════
+let onFire=false,crewPhase='none',crewTimer=0,smokeP=[],fireP=[];
+let fireDoorClosed=false,fireDoorX=340;
+function startFire(){
+  phase='fire';step='fire_choice';onFire=false;crewPhase='none';crewTimer=0;fireDoorClosed=false;
+  smokeP=[];fireP=[];
+  P.x=200;P.y=GR-50;// "inside" the house
+  showStory('Narrator','🔥 WILDFIRE! You\'re inside a house. The fire is right outside the front door. Smoke is filling the room. What do you do?',[
+    {label:'🚪 Close the door and stay back (safer)',fn:fireChoice_Close},
+    {label:'🏃 Run through the burning doorway!',fn:fireChoice_Run},
+  ]);
+  addChat('NPC Amy','Close the door! Wait for the fire crew!','#88aaff');
+  setTimeout(()=>{if(step==='fire_choice'||step==='fire_stay')beginFireCrewArrive();},9000);
+}
+function fireChoice_Close(){
+  step='fire_stay';fireDoorClosed=true;
+  storyTimed('Narrator','✅ Smart! You close the door and crouch low. Smoke seeps under the door but you\'re protected. The fire crew is on the way!',5000);
+  addChat('NPC Mike','Good call! The door blocks the worst of the flames.','#44ff88');
+  setTimeout(beginFireCrewArrive,7000);
+}
+function fireChoice_Run(){
+  step='fire_onfire';fireDoorClosed=false;onFire=true;
+  document.getElementById('fire-overlay').style.display='block';
+  document.getElementById('spell').style.display='block';
+  setTimeout(()=>document.getElementById('spell-in').focus(),80);
+  showStory('Narrator','🔥 You run through the burning doorway — the FLAMES catch you! Quick, type STOP DROP ROLL to extinguish the fire before it\'s too late!');
+  addChat('NPC Bob','STOP DROP ROLL!! Type it RIGHT NOW!!','#ff4444');
+  setTimeout(()=>{if(onFire){hurtPlayer(hasFireSuit()?20:40);storyTimed('Narrator','The fire is still burning you! HURRY — type STOP DROP ROLL!',3000);}},5000);
+  setTimeout(()=>{if(onFire){hurtPlayer(hasFireSuit()?15:35);if(G.hp<=0)die();}},10000);
+}
+function beginFireCrewArrive(){
+  if(step==='fire_done'||step==='fire_rescued'||phase!=='fire')return;
+  const arrive=Math.random()<.5?'window':'door';crewPhase=arrive;crewTimer=0;
+  if(arrive==='window'){
+    step='fire_window';
+    showStory('Narrator','🚒 KNOCK KNOCK! A firefighter is at your WINDOW! Climb out through the window to safety! (Press ⚡ Action)',[
+      {label:'🪟 Climb out the window!',fn:climbOutWindow},
+      {label:'❌ Ignore it…',fn:ignoreWindow},
+    ]);
+    addChat('Firefighter','HEY! Over here! Come to the window!','#ff8844');
+  } else {
+    step='fire_door_crew';
+    showStory('Narrator','💥 CRASH! A firefighter BURSTS through the door! They grab you and carry you outside to safety!');
+    addChat('Firefighter','I\'ve got you! Let\'s GO!','#ff8844');
+    setTimeout(()=>{step='fire_rescued';endHazard(200);},2500);
+  }
+}
+function climbOutWindow(){
+  step='fire_rescued';
+  showStory('Narrator','You climb out the window into the firefighter\'s arms! You\'re SAFE! 🎉');
+  addChat('Firefighter','Got you! You\'re safe now. Great job staying calm!','#44ff88');
+  setTimeout(()=>endHazard(200),2500);
+}
+function ignoreWindow(){
+  hurtPlayer(25);
+  storyTimed('Narrator','The firefighter breaks in and drags you out anyway! (-25 HP)',2500);
+  setTimeout(()=>endHazard(50),2500);
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DRAW HELPERS
+// ═══════════════════════════════════════════════════════════
+function drawHouse(x,y,w,h,wallCol,roofCol){
+  ctx.fillStyle=wallCol;ctx.fillRect(x,y,w,h);
+  ctx.fillStyle=roofCol;ctx.beginPath();ctx.moveTo(x-5,y);ctx.lineTo(x+w/2,y-32);ctx.lineTo(x+w+5,y);ctx.closePath();ctx.fill();
+  // Door
+  ctx.fillStyle='rgba(30,15,5,.95)';ctx.fillRect(x+w/2-14,y+h-42,28,42);
+  ctx.fillStyle='rgba(255,200,100,.4)';ctx.fillRect(x+w/2-2,y+h-30,4,4);// knob
+  // Windows
+  [[x+12,y+16],[x+w-40,y+16]].forEach(([wx,wy])=>{ctx.fillStyle='rgba(150,200,255,.35)';ctx.fillRect(wx,wy,24,22);ctx.strokeStyle='rgba(255,255,255,.3)';ctx.lineWidth=1;ctx.strokeRect(wx,wy,24,22);});
+}
+function drawTornado(){
+  tornadoX+=tornadoVX;if(tornadoX>650||tornadoX<50)tornadoVX*=-1;
+  tornadoRot+=.08;
+  const tx=tornadoX,ty=GR-115;
+  ctx.save();ctx.translate(tx,ty);
+  // base dust cloud
+  for(let i=0;i<3;i++){ctx.fillStyle=`rgba(180,150,100,${.4-i*.1})`;ctx.beginPath();ctx.ellipse(0,GR-ty,55+i*14,18+i*7,0,0,Math.PI*2);ctx.fill();}
+  // dust particles
+  tornadoDust.forEach(d=>{d.ang+=d.spd;d.dist=Math.max(14,d.dist-.12);if(d.dist<15){d.ang=Math.random()*Math.PI*2;d.dist=18+Math.random()*85;}const yOff=(d.dist/100)*(GR-ty)*.55;ctx.globalAlpha=.75;ctx.fillStyle=d.col;ctx.beginPath();ctx.arc(Math.cos(d.ang+tornadoRot)*d.dist,yOff+Math.sin(d.ang+tornadoRot)*d.dist*.42,d.sz,0,Math.PI*2);ctx.fill();});ctx.globalAlpha=1;
+  // funnel cone
+  for(let i=0;i<20;i++){const t=i/20,fw=48*(1-t*.9)+3,fy=t*(GR-ty);ctx.fillStyle=`rgba(${100+t*60},${80+t*50},${140+t*40},${.48+t*.3})`;ctx.beginPath();ctx.ellipse(0,fy,fw,7,0,0,Math.PI*2);ctx.fill();}
+  ctx.strokeStyle='rgba(170,150,210,.6)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-48,0);for(let i=0;i<=20;i++){const t=i/20,fw=48*(1-t*.9)+3,fy=t*(GR-ty);ctx.lineTo(-fw,fy);}for(let i=20;i>=0;i--){const t=i/20,fw=48*(1-t*.9)+3,fy=t*(GR-ty);ctx.lineTo(fw,fy);}ctx.lineTo(48,0);ctx.stroke();
+  ctx.restore();
+  // label
+  ctx.fillStyle='rgba(210,190,255,.9)';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText('🌪️ TORNADO',tx,ty-14);ctx.textAlign='left';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PLAYER DRAW
+// ═══════════════════════════════════════════════════════════
+function drawPlayer(){
+  if(G.dead)return;
+  const x=P.x+10,bot=P.y+50,hR=10,hY=bot-50+hR;
+  ctx.strokeStyle='#eee';ctx.lineWidth=3;ctx.lineCap='round';
+  // Head
+  ctx.beginPath();ctx.arc(x,hY,hR,0,Math.PI*2);ctx.stroke();
+  // Hat / face accessories
+  const hatItem=SHOP.concat(customDesigns).find(s=>s.id===EQ.hat);
+  if(hatItem){ctx.font='13px sans-serif';ctx.fillText(hatItem.icon,x-7,hY-hR-1);}
+  const faceItem=SHOP.concat(customDesigns).find(s=>s.id===EQ.face);
+  if(faceItem){ctx.fillStyle='rgba(80,80,80,.55)';ctx.fillRect(x-hR,hY,hR*2,hR*.7);}
+  // Body
+  ctx.beginPath();ctx.moveTo(x,hY+hR);ctx.lineTo(x,bot-18);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x,hY+hR+8);ctx.lineTo(x-14,hY+hR+20);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x,hY+hR+8);ctx.lineTo(x+14,hY+hR+20);ctx.stroke();
+  const ls=Math.sin(P.wp)*14;
+  ctx.beginPath();ctx.moveTo(x,bot-18);ctx.lineTo(x-8+ls,bot-8);ctx.lineTo(x-9+ls,bot);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(x,bot-18);ctx.lineTo(x+8-ls,bot-8);ctx.lineTo(x+9-ls,bot);ctx.stroke();
+  // Body item glow
+  const bodyItem=SHOP.concat(customDesigns).find(s=>s.id===EQ.body);
+  if(bodyItem){ctx.fillStyle='rgba(255,220,80,.2)';ctx.fillRect(x-10,hY+hR+4,20,22);}
+  // Boots
+  if(EQ.boots){ctx.fillStyle='#f80';ctx.fillRect(x-12,bot-4,12,5);ctx.fillRect(x+1,bot-4,12,5);}
+  // HP bar
+  ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(P.x,P.y-14,20,6);
+  ctx.fillStyle=G.hp>50?'#2e2':G.hp>25?'#fa0':'#e22';
+  ctx.fillRect(P.x,P.y-14,20*(Math.max(0,G.hp)/100),6);
+  // On fire visual
+  if(onFire){for(let i=0;i<4;i++){const fa=G.frame*.2+i*.8;const fx=x+Math.cos(fa)*12,fy=hY+10+Math.sin(fa)*9;ctx.fillStyle=`rgba(255,${60+Math.random()*100},0,.75)`;ctx.beginPath();ctx.arc(fx,fy,3+Math.random()*4,0,Math.PI*2);ctx.fill();}}
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MAIN DRAW
+// ═══════════════════════════════════════════════════════════
+function draw(){
+  ctx.clearRect(0,0,W,H);
+  // Sky colour per phase
+  let sky='#0d1b2a';
+  if(phase==='earthquake')sky='#1a1208';
+  else if(phase==='tornado')sky='#080818';
+  else if(phase==='flood')sky='#060e1e';
+  else if(phase==='fire')sky='#1e0600';
+  ctx.fillStyle=sky;ctx.fillRect(0,0,W,GR);
+  // Stars
+  ctx.fillStyle='rgba(255,255,255,.45)';
+  for(let i=0;i<25;i++)ctx.fillRect((i*57+G.frame*.05)%W,(i*41)%200+10,1,1);
+  // Sun/moon
+  if(phase==='fire'){ctx.fillStyle='rgba(255,100,0,.45)';ctx.beginPath();ctx.arc(570,75,28,0,Math.PI*2);ctx.fill();}
+  else{ctx.fillStyle='rgba(255,255,210,.25)';ctx.beginPath();ctx.arc(600,65,20,0,Math.PI*2);ctx.fill();}
+  // Background buildings
+  [[20,225,55,165],[110,255,45,120],[205,190,70,195],[325,235,50,150],[440,200,60,188],[558,248,50,138]].forEach(([bx,by,bw,bh])=>{
+    ctx.fillStyle=phase==='fire'?'rgba(80,30,10,.8)':'#0f1f30';ctx.fillRect(bx,by,bw,bh);
+    ctx.fillStyle='rgba(255,220,100,.18)';for(let r=0;r<Math.floor(bh/20);r++)for(let c=0;c<Math.floor(bw/14);c++)if(Math.sin(r*c+G.frame*.001)>0)ctx.fillRect(bx+c*14+3,by+r*20+4,7,9);
+  });
+
+  // ── EARTHQUAKE ──────────────────────────────────
+  if(phase==='earthquake'){
+    const shk=(step==='eq_under_table')?1:(step==='eq_shelter_wait'||step==='eq_inside')?8:0;
+    eqShake=shk;
+    if(eqShake>0){ctx.save();ctx.translate((Math.random()-.5)*eqShake,(Math.random()-.5)*eqShake*.4);}
+    // Ground cracks
+    ctx.fillStyle='#2a2010';ctx.fillRect(0,GR,W,H-GR);ctx.fillStyle='#3a3018';ctx.fillRect(0,GR,W,8);
+    for(let i=0;i<7;i++){ctx.strokeStyle='rgba(180,120,50,.55)';ctx.lineWidth=2.5;ctx.beginPath();const xx=i*100+Math.sin(G.frame*.3+i)*8;ctx.moveTo(xx,GR-4);ctx.lineTo(xx+30+Math.random()*20,GR+6);ctx.stroke();}
+    // EQ houses
+    eqHouses.forEach(h=>{
+      drawHouse(h.x,h.y,h.w,h.h,'#5a4a3a','#8a6a4a');
+      ctx.fillStyle='rgba(255,220,100,.85)';ctx.font='bold 9px sans-serif';ctx.textAlign='center';
+      ctx.fillText('🏠 ENTER [Action/E]',h.x+h.w/2,h.y-8);ctx.textAlign='left';
+    });
+    // Table
+    if(step==='eq_inside'||step==='eq_under_table'||step==='eq_table_wait'){
+      const tx=eqTableX;
+      ctx.fillStyle='#7a5c2e';ctx.fillRect(tx-55,GR-12,110,12);ctx.fillRect(tx-52,GR-12,10,32);ctx.fillRect(tx+42,GR-12,10,32);
+      ctx.fillStyle='rgba(80,60,20,.5)';ctx.fillRect(tx-52,GR-2,104,14);// legs shadow
+      if(step==='eq_inside'||step==='eq_table_wait'){
+        ctx.fillStyle='rgba(255,255,100,.8)';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.fillText('🪑 GET UNDER TABLE [Action/E]',tx,GR-18);ctx.textAlign='left';
+        // highlight
+        ctx.strokeStyle='rgba(255,255,0,.35)';ctx.lineWidth=2;ctx.strokeRect(tx-55,GR-12,110,44);
+        if(Math.abs(P.x-tx)<60)step='eq_table_wait';
+      }
+      if(step==='eq_under_table'){
+        ctx.fillStyle='rgba(100,255,100,.18)';ctx.fillRect(tx-55,GR-12,110,44);
+        ctx.fillStyle='rgba(100,255,100,.85)';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.fillText('🛡️ PROTECTED!',tx,GR-18);ctx.textAlign='left';
+      }
+    }
+    if(eqShake>0)ctx.restore();
+  }
+
+  // Ground (normal)
+  else if(phase!=='flood'&&phase!=='fire'){
+    ctx.fillStyle=phase==='tornado'?'#1a2a1a':'#2d4a1e';ctx.fillRect(0,GR,W,H-GR);
+    ctx.fillStyle='#3a6b28';ctx.fillRect(0,GR,W,8);
+    ctx.fillStyle='#4a8532';for(let i=0;i<18;i++)ctx.fillRect(i*40,GR-4,6,5);
+  }
+
+  // ── TORNADO ──────────────────────────────────────
+  if(phase==='tornado'){
+    ctx.fillStyle='#1a2a1a';ctx.fillRect(0,GR,W,H-GR);
+    ctx.fillStyle='#2a4a28';ctx.fillRect(0,GR,W,8);
+    // Shelter house
+    if(step==='tornado_house_wait'||step==='tornado_choice'){
+      const th=tornadoHouse;
+      drawHouse(th.x,th.y,th.w,th.h,'#4a5a4a','#5a7a5a');
+      ctx.fillStyle='rgba(255,255,200,.88)';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.fillText('🏠 SHELTER [Action/E]',th.x+th.w/2,th.y-8);ctx.textAlign='left';
+    }
+    drawTornado();
+    // Basement
+    if(step==='tornado_basement'){
+      ctx.fillStyle='rgba(8,8,18,.92)';ctx.fillRect(0,GR-130,W,130);
+      ctx.fillStyle='rgba(50,50,70,.5)';ctx.fillRect(0,GR-130,W,4);
+      ctx.fillStyle='rgba(255,255,255,.55)';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.fillText('🔦 BASEMENT — Search for money!',W/2,GR-118);ctx.textAlign='left';
+      // Danger window
+      ctx.strokeStyle='rgba(255,60,60,.7)';ctx.lineWidth=2;ctx.strokeRect(windowX-22,GR-125,44,44);
+      ctx.fillStyle='rgba(150,200,255,.28)';ctx.fillRect(windowX-20,GR-123,40,40);
+      ctx.fillStyle='rgba(255,80,80,.9)';ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.fillText('⚠️ DANGER WINDOW',windowX,GR-80);ctx.textAlign='left';
+      // Money
+      basementMoney.forEach(m=>{if(!m.collected){ctx.font='16px sans-serif';ctx.fillText('💰',m.x-8,GR-14);}});
+      // Check money collection
+      basementMoney.forEach(m=>{if(!m.collected&&Math.abs(P.x-m.x)<28){m.collected=true;G.gold+=m.val;updHUD();spawnP(m.x,GR-20,'#ffd700',8);storyTimed('You','💰 Found $'+m.val+'!',1200);}});
+      // Window damage
+      if(Math.abs(P.x-windowX)<26){hurtPlayer(1.2);if(G.frame%60===0)storyTimed('Narrator','⚠️ The window is cracking! Step BACK!',1500);}
+    }
+    // Suck effect
+    if(tornadoSuck){P.vx+=(tornadoX-P.x)*.018;P.vy+=(GR-100-P.y)*.01;}
+  }
+
+  // ── FLOOD ────────────────────────────────────────
+  if(phase==='flood'){
+    ctx.fillStyle='#2d4a1e';ctx.fillRect(0,GR,W,H-GR);ctx.fillStyle='#3a6b28';ctx.fillRect(0,GR,W,8);
+    // Water
+    if(floodY<H){
+      const wg=ctx.createLinearGradient(0,floodY,0,H);wg.addColorStop(0,'rgba(20,80,200,.84)');wg.addColorStop(1,'rgba(5,25,110,.96)');
+      ctx.fillStyle=wg;ctx.fillRect(0,floodY,W,H-floodY);
+      ctx.fillStyle='rgba(100,160,255,.22)';ctx.fillRect(0,floodY,W,9);
+      ctx.strokeStyle='rgba(150,200,255,.55)';ctx.lineWidth=2;ctx.beginPath();
+      for(let xi=0;xi<=W;xi+=4){const yi=floodY+Math.sin(xi*.025+G.frame*.08)*5+Math.sin(xi*.05-G.frame*.06)*3;xi===0?ctx.moveTo(xi,yi):ctx.lineTo(xi,yi);}ctx.stroke();
+    }
+    // Waves
+    floodWaves=floodWaves.filter(wv=>{
+      wv.x+=wv.vx;wv.life--;
+      ctx.save();ctx.translate(wv.x,floodY);ctx.fillStyle='rgba(80,160,255,.78)';ctx.beginPath();for(let i=-wv.r;i<=wv.r;i+=3){ctx.lineTo(i,Math.sin((i/wv.r)*Math.PI)*-wv.amp);}ctx.lineTo(wv.r,0);ctx.lineTo(-wv.r,0);ctx.closePath();ctx.fill();ctx.fillStyle='rgba(255,255,255,.6)';ctx.beginPath();for(let i=-wv.r*.6;i<=wv.r*.6;i+=3){ctx.lineTo(i,Math.sin((i/(wv.r*.6))*Math.PI)*-wv.amp-2);}ctx.lineTo(wv.r*.6,0);ctx.lineTo(-wv.r*.6,0);ctx.closePath();ctx.fill();ctx.restore();
+      ctx.fillStyle='rgba(255,200,50,.85)';ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.fillText('⚠️',wv.x,floodY-wv.amp-6);ctx.textAlign='left';
+      // Hit
+      if(step==='flood_run'&&Math.abs(wv.x-(P.x+10))<wv.r+10&&P.y+50>floodY-20){hurtPlayer(.35);spawnP(P.x+10,P.y+40,'#44aaff',2);}
+      return wv.life>0&&wv.x>-80&&wv.x<W+80;
+    });
+    // Exit gate
+    ctx.fillStyle='rgba(0,255,80,.28)';ctx.fillRect(FLOOD_END_X,GR-65,20,65);ctx.fillStyle='#44ff88';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.fillText('EXIT →',FLOOD_END_X+10,GR-68);ctx.textAlign='left';
+    // Progress
+    if(step==='flood_run'){
+      const pct=Math.min(1,P.x/FLOOD_END_X);
+      ctx.fillStyle='rgba(0,0,0,.5)';ctx.fillRect(10,GR-32,200,10);ctx.fillStyle='#44ff88';ctx.fillRect(10,GR-32,200*pct,10);ctx.fillStyle='#fff';ctx.font='8px sans-serif';ctx.fillText('Escape: '+Math.round(pct*100)+'%',10,GR-35);
+      // Drown timer
+      drownT-=1/60;ctx.fillStyle=drownT>15?'rgba(100,160,255,.9)':'rgba(255,80,80,.9)';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText('🌊 Drown in '+Math.max(0,Math.ceil(drownT))+'s',W/2,floodY-12);ctx.textAlign='left';
+      if(drownT<=0)endFloodDrowned();
+      if(P.x>=FLOOD_END_X)endFloodSurvived();
+      // Hurt if in water
+      if(P.y+50>floodY){hurtPlayer(.4);}
+    }
+  }
+
+  // ── FIRE HOUSE ────────────────────────────────────
+  if(phase==='fire'&&(step==='fire_choice'||step==='fire_stay'||step==='fire_onfire'||step==='fire_crew_waiting'||step==='fire_window')){
+    // House interior
+    ctx.fillStyle='rgba(55,30,15,.92)';ctx.fillRect(100,GR-140,480,140);ctx.fillStyle='rgba(75,50,25,.85)';ctx.fillRect(100,GR-4,480,4);// floor
+    // Walls
+    ctx.strokeStyle='rgba(100,60,30,.6)';ctx.lineWidth=2;ctx.strokeRect(100,GR-140,480,140);
+    // Door (center)
+    ctx.fillStyle=fireDoorClosed?'rgba(40,20,8,.9)':'rgba(255,80,0,.7)';
+    ctx.fillRect(fireDoorX-18,GR-100,36,100);
+    // Fire glow outside door
+    if(!fireDoorClosed){ctx.fillStyle='rgba(255,80,0,.3)';ctx.fillRect(fireDoorX-50,GR-110,100,20);}
+    // Smoke particles
+    if(G.frame%7===0)smokeP.push({x:100+Math.random()*480,y:GR-10,r:10+Math.random()*18,a:.28+Math.random()*.2,vy:-.7-Math.random()*.4});
+    smokeP=smokeP.filter(s=>{s.y+=s.vy;s.r+=.25;s.a-=.007;ctx.globalAlpha=s.a;ctx.fillStyle='rgba(50,40,30,.7)';ctx.beginPath();ctx.ellipse(s.x,s.y,s.r,s.r*.6,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;return s.a>0;});
+    // Window for crew rescue
+    const winX=160;
+    if(step==='fire_window'||crewPhase==='window_knock'){
+      ctx.fillStyle='rgba(150,200,255,.35)';ctx.fillRect(winX,GR-130,55,45);ctx.strokeStyle='rgba(255,200,0,.85)';ctx.lineWidth=3;ctx.strokeRect(winX,GR-130,55,45);
+      ctx.fillStyle='rgba(255,200,0,.9)';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.fillText('🚒 FIREFIGHTER',winX+27,GR-136);ctx.fillText('👆 CLIMB OUT',winX+27,GR-83);ctx.textAlign='left';
+    } else {ctx.fillStyle='rgba(150,200,255,.25)';ctx.fillRect(winX,GR-130,55,45);}
+    // Outside fire scene
+    ctx.fillStyle='rgba(200,60,0,.15)';ctx.fillRect(0,0,W,GR);
+    [[60,5,'rgba(255,30,0,.9)'],[38,3.5,'rgba(255,120,0,.85)'],[22,2.5,'rgba(255,220,0,.7)']].forEach(([r,fh,col])=>{ctx.fillStyle=col;ctx.beginPath();ctx.moveTo(fireDoorX-r-8,GR+5);for(let xi=fireDoorX-r-8;xi<=fireDoorX+r+8;xi+=5){const fl=Math.sin(xi*.25+G.frame*.3)*7;ctx.lineTo(xi,GR-fh*18+fl);}ctx.lineTo(fireDoorX+r+8,GR+5);ctx.closePath();ctx.fill();});
+    // Door label
+    ctx.fillStyle='rgba(255,200,100,.8)';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.fillText(fireDoorClosed?'🚪 DOOR CLOSED':'🔥 BURNING DOOR',fireDoorX,GR-108);ctx.textAlign='left';
+  }
+
+  // Normal ground
+  if(phase==='lobby'||(phase==='earthquake'&&eqHouses.length>0)){
+    ctx.fillStyle='#2d4a1e';ctx.fillRect(0,GR,W,H-GR);ctx.fillStyle='#3a6b28';ctx.fillRect(0,GR,W,8);ctx.fillStyle='#4a8532';for(let i=0;i<18;i++)ctx.fillRect(i*40,GR-4,6,5);
+  }
+
+  // ── PLAYER ──────────────────────────────────────
+  drawPlayer();
+
+  // ── PARTICLES ───────────────────────────────────
+  particles=particles.filter(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=.2;p.life--;ctx.globalAlpha=p.life/35;ctx.fillStyle=p.col;ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;return p.life>0;});
+
+  // ── AUTO WALK INDICATOR ─────────────────────────
+  if(!K.l&&!K.r&&autoWalkTimer>60&&phase==='lobby'){
+    ctx.fillStyle='rgba(255,255,255,.35)';ctx.font='8px sans-serif';ctx.textAlign='center';ctx.fillText('↔ auto-walking',P.x+10,P.y-18);ctx.textAlign='left';
+  }
+
+  // ── LOBBY DECORATIONS ───────────────────────────
+  if(phase==='lobby'){
+    ctx.fillStyle='rgba(255,255,255,.7)';ctx.font='bold 12px sans-serif';ctx.textAlign='center';ctx.fillText('🏙️ LOBBY — Get ready for the next disaster!',W/2,40);
+    ctx.font='10px sans-serif';ctx.fillStyle='rgba(200,220,255,.7)';ctx.fillText('Buy gear from the Shop. Design accessories. Chat with NPCs.',W/2,58);ctx.textAlign='left';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  GAME LOOP
+// ═══════════════════════════════════════════════════════════
+function tick(){
+  if(!G.dead)requestAnimationFrame(tick);
+  G.frame++;
+  updPlayer();
+  // Flood: raise water over time
+  if(phase==='flood'&&step==='flood_run')floodY=Math.max(GR-120,floodY-.08);
+  draw();updHUD();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  START
+// ═══════════════════════════════════════════════════════════
+loadGame();
+tick();
+// Initial chat + story
+setTimeout(()=>{
+  showStory('Narrator','👋 Welcome to Disaster Survival! Each wave brings a new disaster with its own story. Follow the instructions to survive! Visit the 🏪 Shop to buy safety gear and ✏️ Design your own accessories!');
+  addChat('System','Welcome! Follow the story instructions to survive each disaster.','#44ff88');
+  addChat('NPC Bob','Hey! Buy some gear before the first disaster hits!','#88aaff');
+  setTimeout(()=>{hideStory();setTimeout(nextHazard,3500);},5000);
+},600);
+</script>
+</body>
+</html>
